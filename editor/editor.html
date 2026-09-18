@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AWG Rule-Set Helper — редактор</title>
+  <link rel="stylesheet" href="editor.css" />
+</head>
+<body>
+  <header>
+    <h1>Редактор rule-set</h1>
+    <div class="conn" id="connHint">нет соединения</div>
+    <div class="head-actions">
+      <button id="closeBtn" class="btn" type="button">Закрыть вкладку</button>
+    </div>
+  </header>
+
+  <section class="controls">
+    <label>
+      Тег (только inline)
+      <select id="tagSelect">
+        <option value="">— нажмите «Обновить список» —</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="refreshBtn" class="btn" type="button">Обновить список</button>
+      <button id="loadBtn" class="btn" type="button">Загрузить содержимое</button>
+    </div>
+  </section>
+
+  <main>
+    <textarea id="content" rows="24" spellcheck="false" placeholder='[{"domain_suffix": ["example.com"]}]'></textarea>
+  </main>
+
+  <section class="actions">
+    <div class="row">
+      <button id="saveBtn" class="btn primary" type="button">Сохранить содержимое</button>
+    </div>
+    <div id="status" class="status" hidden></div>
+  </section>
+
+  <script src="../lib/api.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

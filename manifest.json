@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "AWG Rule-Set Helper",
+  "version": "1.0.0",
+  "description": "Добавляет домены в rule-set AWG Manager через API (Authorization: Bearer).",
+  "permissions": ["storage", "contextMenus", "notifications", "tabs"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "AWG Rule-Set Helper"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
