@@ -3,7 +3,7 @@
   "name": "AWG Rule-Set Helper",
   "version": "1.0.0",
   "description": "Добавляет домены в rule-set AWG Manager через API (Authorization: Bearer).",
-  "permissions": ["storage", "contextMenus", "notifications", "tabs"],
+  "permissions": ["storage", "contextMenus", "notifications", "tabs", "webRequest"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js"

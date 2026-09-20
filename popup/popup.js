@@ -79,6 +79,7 @@ async function loadRuleSetOptions({ showErrors } = {}) {
     }
     sel.value = saved || '';
     if (saved) showStatus('Inline-наборов найдено: ' + inline.length, 'ok');
+    await renderIgnoreList(inline);
   } catch (e) {
     if (showErrors) showStatus(String((e && e.message) || e), 'err');
   } finally {
@@ -161,6 +162,182 @@ async function prefillFromActiveTab() {
   } catch (_) {}
 }
 
+const FAILED_KEY = 'failedDomains';
+const IGNORE_TAGS_KEY = 'ignoreRuleSets';
+const IGNORE_DOMAINS_KEY = 'ignoreDomains';
+
+function hostnameOf(url) {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function recomputeIgnoreDomains() {
+  const s = await chrome.storage.local.get(IGNORE_TAGS_KEY);
+  const sel = Array.isArray(s[IGNORE_TAGS_KEY]) ? s[IGNORE_TAGS_KEY] : [];
+  const doms = [];
+  if (sel.length) {
+    const cfg = currentCfg();
+    try {
+      const all = await listRuleSets(cfg);
+      for (const tag of sel) {
+        const rs = all.find((r) => r.tag === tag);
+        if (!rs) continue;
+        for (const r of Array.isArray(rs.rules) ? rs.rules : []) {
+          for (const h of Array.isArray(r.domain) ? r.domain : []) {
+            doms.push({ host: String(h).toLowerCase(), kind: 'domain' });
+          }
+          for (const h of Array.isArray(r.domain_suffix) ? r.domain_suffix : []) {
+            doms.push({ host: String(h).toLowerCase(), kind: 'domain_suffix' });
+          }
+          for (const h of Array.isArray(r.domain_regex) ? r.domain_regex : []) {
+            doms.push({ host: String(h), kind: 'domain_regex' });
+          }
+        }
+      }
+    } catch (_) {}
+  }
+  await chrome.storage.local.set({ [IGNORE_DOMAINS_KEY]: doms });
+}
+
+async function renderIgnoreList(list) {
+  const box = $('ignoreList');
+  box.textContent = '';
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = '— inline-наборов нет —';
+    box.appendChild(empty);
+    return;
+  }
+  const s = await chrome.storage.local.get(IGNORE_TAGS_KEY);
+  const selected = Array.isArray(s[IGNORE_TAGS_KEY]) ? s[IGNORE_TAGS_KEY] : [];
+  for (const rs of list) {
+    const label = document.createElement('label');
+    label.className = 'check-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = rs.tag;
+    cb.checked = selected.includes(rs.tag);
+    cb.addEventListener('change', async () => {
+      const cur = await chrome.storage.local.get(IGNORE_TAGS_KEY);
+      const curSel = Array.isArray(cur[IGNORE_TAGS_KEY]) ? cur[IGNORE_TAGS_KEY] : [];
+      const sel = cb.checked
+        ? [...new Set([...curSel, rs.tag])]
+        : curSel.filter((t) => t !== rs.tag);
+      await chrome.storage.local.set({ [IGNORE_TAGS_KEY]: sel });
+      await recomputeIgnoreDomains();
+    });
+    const span = document.createElement('span');
+    span.className = 'dom';
+    span.textContent = rs.tag;
+    label.append(cb, span);
+    box.appendChild(label);
+  }
+}
+
+async function loadFailedDomains() {
+  const s = await chrome.storage.local.get(FAILED_KEY);
+  let list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
+  let page = null;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url) page = hostnameOf(tab.url);
+  } catch (_) {}
+  const hint = $('failedPageHint');
+  if (!page) {
+    hint.hidden = false;
+    hint.textContent = 'Откройте сайт, чтобы увидеть его неудачные запросы';
+  } else {
+    hint.hidden = false;
+    hint.textContent = 'Страница: ' + page;
+    list = list.filter((x) => x.page === page);
+  }
+  renderFailedDomains(list);
+}
+
+function renderFailedDomains(list) {
+  const ul = $('failedList');
+  ul.textContent = '';
+  if (!list.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'Нет неудачных запросов для этой страницы';
+    ul.appendChild(li);
+    return;
+  }
+  for (const item of list) {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    label.className = 'check-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.domain = item.domain;
+    const info = document.createElement('span');
+    info.className = 'check-info';
+    const d = document.createElement('span');
+    d.className = 'dom';
+    d.textContent = item.domain + (item.count > 1 ? ' ×' + item.count : '');
+    const c = document.createElement('span');
+    c.className = 'code';
+    c.textContent = item.code || '';
+    info.append(d, c);
+    label.append(cb, info);
+    li.appendChild(label);
+    ul.appendChild(li);
+  }
+}
+
+async function addFailedSelected() {
+  const boxes = [...$('failedList').querySelectorAll('input[type="checkbox"]:checked')];
+  if (!boxes.length) {
+    showStatus('Ничего не выбрано', 'err');
+    return;
+  }
+  const cfg = currentCfg();
+  if (!cfg.baseUrl || !cfg.ruleSetTag) {
+    showStatus('Заполни Base URL и выбери rule-set', 'err');
+    return;
+  }
+  $('addSelectedBtn').disabled = true;
+  let added = 0;
+  let skipped = 0;
+  let failed = 0;
+  const done = [];
+  try {
+    await saveSettings();
+    for (const cb of boxes) {
+      const domain = cb.dataset.domain;
+      try {
+        const res = await addDomainToRuleSet(cfg, domain, cfg.matcher);
+        res.alreadyPresent ? skipped++ : added++;
+        if (!res.alreadyPresent) await addHistory(res.domain);
+        done.push(domain);
+      } catch (e) {
+        failed++;
+        showStatus('Домен ' + domain + ': ' + String((e && e.message) || e), 'err');
+      }
+    }
+    if (!failed) {
+      let msg = 'Добавлено: ' + added;
+      if (skipped) msg += ', уже были: ' + skipped;
+      showStatus(msg, 'ok');
+    }
+    if (done.length) {
+      const s = await chrome.storage.local.get(FAILED_KEY);
+      let list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
+      list = list.filter((x) => !done.includes(x.domain));
+      await chrome.storage.local.set({ [FAILED_KEY]: list });
+      renderFailedDomains(list);
+    }
+  } finally {
+    $('addSelectedBtn').disabled = false;
+  }
+}
+
 $('saveBtn').addEventListener('click', saveSettings);
 
 $('checkBtn').addEventListener('click', async () => {
@@ -210,9 +387,17 @@ $('clearBtn').addEventListener('click', async () => {
   await loadHistory();
 });
 
+$('addSelectedBtn').addEventListener('click', addFailedSelected);
+
+$('clearFailedBtn').addEventListener('click', async () => {
+  await chrome.storage.local.set({ [FAILED_KEY]: [] });
+  renderFailedDomains([]);
+});
+
 (async () => {
   await loadSettings();
   await loadHistory();
+  await loadFailedDomains();
   await prefillFromActiveTab();
   await loadRuleSetOptions({ showErrors: false });
 })();

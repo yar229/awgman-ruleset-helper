@@ -45,6 +45,8 @@
         <option value="domain">domain (только точный домен)</option>
       </select>
     </label>
+    <label>Игнорировать при подсчёте ошибок (домены из rule-set)</label>
+    <div id="ignoreList" class="ignore-list"></div>
     <div class="row">
       <button id="refreshListBtn" class="btn" type="button">Обновить список</button>
       <button id="checkBtn" class="btn" type="button">Проверить</button>
@@ -63,6 +65,16 @@
         <input id="domainInput" type="text" placeholder="example.com" spellcheck="false" />
       </label>
       <button id="addBtn" class="btn primary block" type="button">Добавить в rule-set</button>
+    </div>
+
+    <div class="card">
+      <h2>Неудачные запросы</h2>
+      <div class="hint" id="failedPageHint" hidden></div>
+      <ul id="failedList" class="checklist"></ul>
+      <div class="row">
+        <button id="addSelectedBtn" class="btn primary" type="button">Добавить выбранные</button>
+        <button id="clearFailedBtn" class="btn ghost" type="button">Очистить</button>
+      </div>
     </div>
 
     <div class="card">

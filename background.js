@@ -2,6 +2,10 @@ importScripts('lib/api.js');
 
 const NOTIFY_ID = 'awg-ruleset-notify';
 
+const FAILED_KEY = 'failedDomains';
+const IGNORE_DOMAINS_KEY = 'ignoreDomains';
+const MAX_FAILED = 100;
+
 async function notify(title, message) {
   try {
     await chrome.notifications.create(NOTIFY_ID, {
@@ -71,3 +75,138 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await notify('AWG Rule-Set: ошибка', String((e && e.message) || e));
   }
 });
+
+function domainOfUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.hostname.toLowerCase();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function isIgnoredDomain(domain) {
+  const s = await chrome.storage.local.get(IGNORE_DOMAINS_KEY);
+  const list = Array.isArray(s[IGNORE_DOMAINS_KEY]) ? s[IGNORE_DOMAINS_KEY] : [];
+  return list.some((e) => {
+    if (e.kind === 'domain' || !e.kind) return domain === e.host;
+    if (e.kind === 'domain_regex') {
+      try {
+        return new RegExp(e.host).test(domain);
+      } catch (_) {
+        return false;
+      }
+    }
+    return domain === e.host || domain.endsWith('.' + e.host);
+  });
+}
+
+async function recordFailedDomain(domain, page, code) {
+  const s = await chrome.storage.local.get(FAILED_KEY);
+  let list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
+  const now = Date.now();
+  const existing = list.find((x) => x.domain === domain && (page ? x.page === page : !x.page));
+  if (existing) {
+    existing.count = (existing.count || 1) + 1;
+    existing.ts = now;
+    if (code) existing.code = code;
+    list = [existing].concat(list.filter((x) => x !== existing));
+  } else {
+    list.unshift({ domain, page: page || '', code: code || '', count: 1, ts: now });
+  }
+  if (list.length > MAX_FAILED) list = list.slice(0, MAX_FAILED);
+  await chrome.storage.local.set({ [FAILED_KEY]: list });
+}
+
+async function pageOfTab(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return domainOfUrl(tab.url) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function relevantDomain(details) {
+  if (details.initiator && details.initiator.startsWith('chrome-extension://')) return null;
+  if (details.url && details.url.startsWith('chrome-extension:')) return null;
+  if (details.tabId < 0) return null;
+  const domain = domainOfUrl(details.url);
+  if (!domain) return null;
+  if (domain === 'localhost') return null;
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(domain)) return null;
+  return domain;
+}
+
+chrome.webRequest.onErrorOccurred.addListener(
+  async (details) => {
+    const domain = relevantDomain(details);
+    if (!domain) return;
+    if (await isIgnoredDomain(domain)) return;
+    const page = await pageOfTab(details.tabId);
+    await recordFailedDomain(domain, page, details.error || 'net::ERR').catch(() => {});
+    await refreshActiveBadge();
+  },
+  { urls: ['http://*/*', 'https://*/*'] },
+);
+
+chrome.webRequest.onCompleted.addListener(
+  async (details) => {
+    if (!details.statusCode || details.statusCode < 400) return;
+    const domain = relevantDomain(details);
+    if (!domain) return;
+    if (await isIgnoredDomain(domain)) return;
+    const page = await pageOfTab(details.tabId);
+    await recordFailedDomain(domain, page, 'HTTP ' + details.statusCode).catch(() => {});
+    await refreshActiveBadge();
+  },
+  { urls: ['http://*/*', 'https://*/*'] },
+);
+
+async function failedTotalForPage(page) {
+  if (!page) return 0;
+  const s = await chrome.storage.local.get(FAILED_KEY);
+  const list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
+  let total = 0;
+  for (const x of list) {
+    if (x.page === page) total += x.count || 1;
+  }
+  return total;
+}
+
+async function refreshActiveBadge() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const page = domainOfUrl(tab && tab.url);
+    const total = await failedTotalForPage(page);
+    const text = total === 0 ? '' : total > 99 ? '99+' : String(total);
+    await chrome.action.setBadgeBackgroundColor({ color: '#f2c94c' }).catch(() => {});
+    await chrome.action.setBadgeTextColor({ color: '#1f2328' }).catch(() => {});
+    await chrome.action.setBadgeText({ text }).catch(() => {});
+  } catch (_) {}
+}
+
+async function clearFailedForPage(page) {
+  if (!page) return;
+  const s = await chrome.storage.local.get(FAILED_KEY);
+  let list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
+  const filtered = list.filter((x) => x.page !== page);
+  if (filtered.length !== list.length) {
+    await chrome.storage.local.set({ [FAILED_KEY]: filtered });
+  }
+}
+
+chrome.tabs.onActivated.addListener(() => refreshActiveBadge());
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+  if (changeInfo.status === 'loading') {
+    const page = await pageOfTab(tabId);
+    await clearFailedForPage(page);
+  }
+  await refreshActiveBadge();
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes[FAILED_KEY]) refreshActiveBadge();
+});
+refreshActiveBadge();
