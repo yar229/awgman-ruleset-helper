@@ -6,7 +6,7 @@
   "permissions": ["storage", "contextMenus", "notifications", "tabs", "webRequest"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["lib/api.js", "background.js"]
   },
   "action": {
     "default_popup": "popup/popup.html",
@@ -17,6 +17,12 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "awg-ruleset-helper@firefox",
+      "strict_min_version": "109.0"
+    }
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

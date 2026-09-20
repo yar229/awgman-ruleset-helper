@@ -1,6 +1,32 @@
-importScripts('lib/api.js');
+globalThis.__AWG_BACKGROUND__ = true;
+
+// Классический скрипт без import()/export: Chrome MV3 (classic SW) подтягивает
+// api.js через importScripts, Firefox — через background.scripts. Это обходит
+// ограничение "import() is disallowed on ServiceWorkerGlobalScope".
+if (typeof awgRequest === 'undefined' && typeof importScripts === 'function') {
+  try {
+    importScripts('lib/api.js');
+  } catch (_) {}
+}
 
 const NOTIFY_ID = 'awg-ruleset-notify';
+
+// Выполнение всех сетевых запросов к AWG Manager здесь, в фоне:
+// в Firefox MV3 fetch из попапа может зависнуть на CORS-preflight,
+// а из фонового скрипта запросы к хостам из host_permissions всегда
+// выполняются без ограничений CORS.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== 'awg:request') return;
+  (async () => {
+    try {
+      const value = await awgRequest(msg.opts);
+      sendResponse({ ok: true, value });
+    } catch (e) {
+      sendResponse({ ok: false, error: String((e && e.message) || e) });
+    }
+  })();
+  return true;
+});
 
 const FAILED_KEY = 'failedDomains';
 const IGNORE_DOMAINS_KEY = 'ignoreDomains';
@@ -183,7 +209,11 @@ async function refreshActiveBadge() {
     const total = await failedTotalForPage(page);
     const text = total === 0 ? '' : total > 99 ? '99+' : String(total);
     await chrome.action.setBadgeBackgroundColor({ color: '#f2c94c' }).catch(() => {});
-    await chrome.action.setBadgeTextColor({ color: '#1f2328' }).catch(() => {});
+    // setBadgeTextColor доступен в Chrome и Firefox 138+; в более старых Firefox
+    // цвет текста бейджа подставляется браузером автоматически.
+    if (typeof chrome.action.setBadgeTextColor === 'function') {
+      await chrome.action.setBadgeTextColor({ color: '#1f2328' }).catch(() => {});
+    }
     await chrome.action.setBadgeText({ text }).catch(() => {});
   } catch (_) {}
 }

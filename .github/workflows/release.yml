@@ -15,30 +15,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Compute version and archive name
+      - name: Compute version and archive names
         id: ver
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "archive=awg-ruleset-helper-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "chrome=awg-ruleset-helper-$VERSION-chrome.zip" >> "$GITHUB_OUTPUT"
+          echo "firefox=awg-ruleset-helper-$VERSION-firefox.zip" >> "$GITHUB_OUTPUT"
 
-      - name: Package extension
+      - name: Build and stage manifests
+        run: node build.mjs
+
+      - name: Zip chrome
         run: |
-          set -euo pipefail
-          mkdir -p dist/pkg
-          cp -r manifest.json background.js lib popup editor icons README.md dist/pkg/
-          cd dist/pkg
-          zip -q -r "../${{ steps.ver.outputs.archive }}" .
-          cd ..
-          ls -la
+          cd dist/chrome
+          zip -q -r "../${{ steps.ver.outputs.chrome }}" .
 
-      - name: Validate archive contents
+      - name: Zip firefox
         run: |
-          unzip -l "dist/${{ steps.ver.outputs.archive }}" | grep "manifest.json"
+          cd dist/firefox
+          zip -q -r "../${{ steps.ver.outputs.firefox }}" .
 
-      - name: Create release and upload asset
+      - name: Validate archives
+        run: |
+          unzip -l "dist/${{ steps.ver.outputs.chrome }}" | grep "manifest.json"
+          unzip -l "dist/${{ steps.ver.outputs.firefox }}" | grep "manifest.json"
+          ls -la dist
+
+      - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.ver.outputs.version }}
-          files: dist/${{ steps.ver.outputs.archive }}
+          files: |
+            dist/${{ steps.ver.outputs.chrome }}
+            dist/${{ steps.ver.outputs.firefox }}
           generate_release_notes: true
