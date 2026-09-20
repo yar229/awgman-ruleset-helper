@@ -1,4 +1,6 @@
-importScripts('lib/api.js');
+if (typeof importScripts === 'function') {
+  importScripts('lib/api.js');
+}
 
 const NOTIFY_ID = 'awg-ruleset-notify';
 

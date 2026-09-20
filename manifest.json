@@ -4,8 +4,12 @@
   "version": "1.0.0",
   "description": "Добавляет домены в rule-set AWG Manager через API (Authorization: Bearer).",
   "permissions": ["storage", "contextMenus", "notifications", "tabs"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
+    "scripts": ["lib/api.js", "background.js"],
     "service_worker": "background.js"
   },
   "action": {
