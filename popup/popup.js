@@ -32,7 +32,12 @@ async function saveSettings() {
     flavor: $('flavor').value,
     matcher: $('matcher').value,
   });
-  showStatus('Настройки сохранены', 'ok');
+  const el = $('settingsStatus');
+  el.textContent = 'Настройки сохранены';
+  el.hidden = false;
+  el.classList.add('ok');
+  el.classList.remove('err');
+  setTimeout(() => { el.hidden = true; }, 4000);
 }
 
 function currentCfg() {
@@ -338,7 +343,17 @@ async function addFailedSelected() {
   }
 }
 
-$('saveBtn').addEventListener('click', saveSettings);
+$('saveBtn').addEventListener('click', async () => {
+  await saveSettings();
+  try {
+    await chrome.notifications.create('awg-settings-saved', {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+      title: 'AWG Rule-Set',
+      message: 'Настройки сохранены',
+    });
+  } catch (_) {}
+});
 
 $('checkBtn').addEventListener('click', async () => {
   const cfg = currentCfg();
