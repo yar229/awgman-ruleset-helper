@@ -20,8 +20,8 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "chrome=awg-ruleset-helper-$VERSION-chrome.zip" >> "$GITHUB_OUTPUT"
-          echo "firefox=awg-ruleset-helper-$VERSION-firefox.zip" >> "$GITHUB_OUTPUT"
+          echo "chrome=awgm-ruleset-helper-$VERSION-chrome.zip" >> "$GITHUB_OUTPUT"
+          echo "firefox=awgm-ruleset-helper-$VERSION-firefox.zip" >> "$GITHUB_OUTPUT"
 
       - name: Build and stage manifests
         run: node build.mjs --version=${{ steps.ver.outputs.version }}
