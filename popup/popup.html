@@ -16,7 +16,7 @@
   </header>
 
   <details id="settingsPanel" class="card">
-    <summary>Соединение</summary>
+    <summary>Настройки</summary>
     <label>
       Base URL (API)
       <input id="baseUrl" type="text" placeholder="http://192.168.1.1:2222/api" spellcheck="false" />
@@ -44,6 +44,10 @@
         <option value="domain_suffix">domain_suffix (домен + поддомены)</option>
         <option value="domain">domain (только точный домен)</option>
       </select>
+    </label>
+    <label class="checkbox-label">
+      <input id="stripWww" type="checkbox" />
+      Убирать www из имени
     </label>
     <label>Игнорировать при подсчёте ошибок (домены из rule-set)</label>
     <div id="ignoreList" class="ignore-list"></div>

@@ -15,12 +15,13 @@ function showStatus(text, kind) {
 }
 
 async function loadSettings() {
-  const s = await chrome.storage.local.get(['baseUrl', 'apiKey', 'ruleSetTag', 'flavor', 'matcher']);
+  const s = await chrome.storage.local.get(['baseUrl', 'apiKey', 'ruleSetTag', 'flavor', 'matcher', 'stripWww']);
   $('baseUrl').value = s.baseUrl || 'http://192.168.1.1:2222/api';
   $('apiKey').value = s.apiKey || '';
   $('ruleSetTag').value = s.ruleSetTag || '';
   $('flavor').value = s.flavor || 'fakeip';
   $('matcher').value = s.matcher || 'domain_suffix';
+  $('stripWww').checked = !!s.stripWww;
   $('refreshListBtn').disabled = !$('baseUrl').value;
 }
 
@@ -31,6 +32,7 @@ async function saveSettings() {
     ruleSetTag: $('ruleSetTag').value.trim(),
     flavor: $('flavor').value,
     matcher: $('matcher').value,
+    stripWww: $('stripWww').checked,
   });
   const el = $('settingsStatus');
   el.textContent = 'Настройки сохранены';
@@ -163,7 +165,11 @@ async function prefillFromActiveTab() {
     } catch (_) {
       return;
     }
-    if (host) $('domainInput').value = host;
+    if (host) {
+      const s = await chrome.storage.local.get('stripWww');
+      if (s.stripWww && host.startsWith('www.') && host.split('.').length > 2) host = host.slice(4);
+      $('domainInput').value = host;
+    }
   } catch (_) {}
 }
 

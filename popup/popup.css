@@ -124,6 +124,13 @@ label {
   color: var(--muted);
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
 input[type="text"],
 input[type="password"],
 select {
