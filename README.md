@@ -1,6 +1,6 @@
-# AWG Rule-Set Helper
+# AWGManager Rule-Set Helper
 
-Небольшое расширение для Google Chrome, которое управляет rule-set'ами [AWG Manager](https://github.com/hoaxisr/awg-manager) через его HTTP API: добавляет домены в наборы, редактирует содержимое и проверяет соединение — без захода в веб-интерфейс.
+Небольшое расширение для Google Chrome и Firefox, которое управляет rule-set'ами [AWG Manager](https://github.com/hoaxisr/awg-manager) через его HTTP API: добавляет/редактирует домены без необходимости заходить в веб-интерфейс AWG Manager'а.
 
 ## Возможности
 
