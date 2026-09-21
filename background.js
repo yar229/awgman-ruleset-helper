@@ -30,6 +30,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 const FAILED_KEY = 'failedDomains';
 const IGNORE_DOMAINS_KEY = 'ignoreDomains';
+const IGNORE_ERRORS_KEY = 'ignoreErrors';
 const MAX_FAILED = 100;
 
 async function notify(title, message) {
@@ -129,6 +130,18 @@ async function isIgnoredDomain(domain) {
   });
 }
 
+async function isIgnoredError(code) {
+  if (!code) return false;
+  const s = await chrome.storage.local.get(IGNORE_ERRORS_KEY);
+  const list =
+    s[IGNORE_ERRORS_KEY] === undefined
+      ? DEFAULT_IGNORE_ERRORS
+      : Array.isArray(s[IGNORE_ERRORS_KEY])
+        ? s[IGNORE_ERRORS_KEY]
+        : [];
+  return list.includes(code);
+}
+
 async function recordFailedDomain(domain, page, code) {
   const s = await chrome.storage.local.get(FAILED_KEY);
   let list = Array.isArray(s[FAILED_KEY]) ? s[FAILED_KEY] : [];
@@ -171,6 +184,7 @@ chrome.webRequest.onErrorOccurred.addListener(
     const domain = relevantDomain(details);
     if (!domain) return;
     if (await isIgnoredDomain(domain)) return;
+    if (await isIgnoredError(details.error)) return;
     const page = await pageOfTab(details.tabId);
     await recordFailedDomain(domain, page, details.error || 'net::ERR').catch(() => {});
     await refreshActiveBadge();
@@ -184,6 +198,7 @@ chrome.webRequest.onCompleted.addListener(
     const domain = relevantDomain(details);
     if (!domain) return;
     if (await isIgnoredDomain(domain)) return;
+    if (await isIgnoredError('HTTP ' + details.statusCode)) return;
     const page = await pageOfTab(details.tabId);
     await recordFailedDomain(domain, page, 'HTTP ' + details.statusCode).catch(() => {});
     await refreshActiveBadge();

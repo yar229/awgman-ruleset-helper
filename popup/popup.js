@@ -28,17 +28,25 @@ function showAddStatus(text, kind) {
 }
 
 async function loadSettings() {
-  const s = await chrome.storage.local.get(['baseUrl', 'apiKey', 'ruleSetTag', 'flavor', 'matcher', 'stripWww']);
+  const s = await chrome.storage.local.get(['baseUrl', 'apiKey', 'ruleSetTag', 'flavor', 'matcher', 'stripWww', 'ignoreErrors']);
   $('baseUrl').value = s.baseUrl || 'http://192.168.1.1:2222/api';
   $('apiKey').value = s.apiKey || '';
   $('ruleSetTag').value = s.ruleSetTag || '';
   $('flavor').value = s.flavor || 'fakeip';
   $('matcher').value = s.matcher || 'domain_suffix';
   $('stripWww').checked = !!s.stripWww;
+  const ignoreErrors =
+    s.ignoreErrors === undefined ? DEFAULT_IGNORE_ERRORS : Array.isArray(s.ignoreErrors) ? s.ignoreErrors : [];
+  $('ignoreErrorsInput').value = ignoreErrors.join('\n');
+  if (s.ignoreErrors === undefined) await chrome.storage.local.set({ ignoreErrors });
   $('refreshListBtn').disabled = !$('baseUrl').value;
 }
 
 async function saveSettings() {
+  const ignoreErrors = $('ignoreErrorsInput')
+    .value.split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   await chrome.storage.local.set({
     baseUrl: $('baseUrl').value.trim(),
     apiKey: $('apiKey').value.trim(),
@@ -46,6 +54,7 @@ async function saveSettings() {
     flavor: $('flavor').value,
     matcher: $('matcher').value,
     stripWww: $('stripWww').checked,
+    ignoreErrors,
   });
   const el = $('settingsStatus');
   el.textContent = 'Настройки сохранены';
