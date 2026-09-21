@@ -175,7 +175,7 @@ $('saveBtn').addEventListener('click', async () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
     e.preventDefault();
     $('saveBtn').click();
   }
