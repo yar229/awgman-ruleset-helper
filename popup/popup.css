@@ -117,6 +117,14 @@ details.card summary {
   color: var(--muted);
 }
 
+#settingsPanel {
+  display: none;
+}
+
+#settingsPanel.open {
+  display: block;
+}
+
 label {
   display: block;
   margin-bottom: 10px;

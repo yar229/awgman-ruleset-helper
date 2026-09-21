@@ -390,8 +390,10 @@ $('checkBtn').addEventListener('click', async () => {
   }
 });
 
-$('settingsToggle').addEventListener('click', () => {
-  $('settingsPanel').open = !$('settingsPanel').open;
+$('settingsToggle').addEventListener('click', async () => {
+  const panel = $('settingsPanel');
+  panel.classList.toggle('open');
+  await chrome.storage.local.set({ settingsOpen: panel.classList.contains('open') });
 });
 
 $('refreshListBtn').addEventListener('click', () => loadRuleSetOptions({ showErrors: true }));
@@ -420,6 +422,8 @@ $('clearFailedBtn').addEventListener('click', async () => {
 
 (async () => {
   await loadSettings();
+  const so = await chrome.storage.local.get('settingsOpen');
+  if (so.settingsOpen !== false) $('settingsPanel').classList.add('open');
   await loadHistory();
   await loadFailedDomains();
   await prefillFromActiveTab();
