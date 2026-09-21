@@ -419,3 +419,18 @@ footer {
   color: var(--muted);
   border-top: 1px solid var(--divider);
 }
+
+footer.repo {
+  padding-top: 2px;
+  border-top: 0;
+}
+
+footer.repo a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+footer.repo a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
