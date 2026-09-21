@@ -24,7 +24,7 @@ jobs:
           echo "firefox=awg-ruleset-helper-$VERSION-firefox.zip" >> "$GITHUB_OUTPUT"
 
       - name: Build and stage manifests
-        run: node build.mjs
+        run: node build.mjs --version=${{ steps.ver.outputs.version }}
 
       - name: Zip chrome
         run: |

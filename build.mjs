@@ -1,6 +1,9 @@
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 
 const sources = ['background.js', 'lib', 'popup', 'editor', 'icons', 'README.md'];
+
+const versionArg = process.argv.find((a) => a.startsWith('--version='));
+const version = versionArg ? versionArg.split('=')[1] : null;
 
 async function stage(browser, manifestSrc, destDir) {
   await rm(destDir, { recursive: true, force: true });
@@ -8,8 +11,10 @@ async function stage(browser, manifestSrc, destDir) {
   for (const f of sources) {
     await cp(f, destDir + '/' + f, { recursive: true });
   }
-  await cp(manifestSrc, destDir + '/manifest.json');
-  console.log('staged', browser, '->', destDir);
+  const manifest = JSON.parse(await readFile(manifestSrc, 'utf8'));
+  if (version) manifest.version = version;
+  await writeFile(destDir + '/manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+  console.log('staged', browser, '->', destDir, version ? '(v' + version + ')' : '');
 }
 
 await stage('chrome', 'manifest.json', 'dist/chrome');
