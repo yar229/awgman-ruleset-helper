@@ -276,22 +276,22 @@ function renderFailedDomains(list) {
   }
   for (const item of list) {
     const li = document.createElement('li');
-    const label = document.createElement('label');
-    label.className = 'check-item';
+    li.className = 'check-item';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.dataset.domain = item.domain;
     const info = document.createElement('span');
     info.className = 'check-info';
-    const d = document.createElement('span');
-    d.className = 'dom';
-    d.textContent = item.domain + (item.count > 1 ? ' ×' + item.count : '');
+    const d = document.createElement('input');
+    d.type = 'text';
+    d.className = 'dom-input';
+    d.value = item.domain;
+    d.spellcheck = false;
     const c = document.createElement('span');
     c.className = 'code';
-    c.textContent = item.code || '';
+    c.textContent = (item.count > 1 ? '×' + item.count + ' ' : '') + (item.code || '');
     info.append(d, c);
-    label.append(cb, info);
-    li.appendChild(label);
+    li.append(cb, info);
     ul.appendChild(li);
   }
 }
@@ -315,12 +315,15 @@ async function addFailedSelected() {
   try {
     await saveSettings();
     for (const cb of boxes) {
-      const domain = cb.dataset.domain;
+      const li = cb.closest('li');
+      const domInput = li ? li.querySelector('.dom-input') : null;
+      const domain = domInput ? domInput.value.trim() : '';
+      if (!domain) continue;
       try {
         const res = await addDomainToRuleSet(cfg, domain, cfg.matcher);
         res.alreadyPresent ? skipped++ : added++;
         if (!res.alreadyPresent) await addHistory(res.domain);
-        done.push(domain);
+        done.push(cb.dataset.domain);
       } catch (e) {
         failed++;
         showStatus('Домен ' + domain + ': ' + String((e && e.message) || e), 'err');

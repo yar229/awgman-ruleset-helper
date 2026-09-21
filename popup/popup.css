@@ -338,6 +338,28 @@ textarea:focus {
   word-break: break-all;
 }
 
+.check-item .dom-input {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  padding: 2px 4px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.check-item .dom-input:hover {
+  border-color: var(--border);
+}
+
+.check-item .dom-input:focus {
+  border-color: var(--accent);
+  background: var(--input-bg);
+  outline: none;
+}
+
 .check-item .code {
   font-size: 10px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
