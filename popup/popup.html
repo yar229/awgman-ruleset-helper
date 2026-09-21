@@ -29,8 +29,8 @@
     <label>
       Раздел API
       <select id="flavor">
-        <option value="fakeip">FakeIP config (вкладка Rule sets)</option>
-        <option value="router">Router (общий sing-box)</option>
+        <option value="fakeip">FakeIP rule-sets</option>
+        <option value="router">TProxy rule-sets</option>
       </select>
     </label>
     <label>
@@ -71,6 +71,7 @@
         <input id="domainInput" type="text" placeholder="example.com" spellcheck="false" />
       </label>
       <button id="addBtn" class="btn primary block" type="button">Добавить в rule-set</button>
+      <div id="addStatus" class="status" hidden></div>
     </div>
 
     <div class="card">

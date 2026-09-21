@@ -14,6 +14,19 @@ function showStatus(text, kind) {
   }, kind === 'err' ? 8000 : 4000);
 }
 
+let addStatusTimer;
+function showAddStatus(text, kind) {
+  const el = $('addStatus');
+  el.textContent = text;
+  el.hidden = false;
+  el.classList.toggle('ok', kind === 'ok');
+  el.classList.toggle('err', kind === 'err');
+  if (addStatusTimer) clearTimeout(addStatusTimer);
+  addStatusTimer = setTimeout(() => {
+    el.hidden = true;
+  }, kind === 'err' ? 8000 : 4000);
+}
+
 async function loadSettings() {
   const s = await chrome.storage.local.get(['baseUrl', 'apiKey', 'ruleSetTag', 'flavor', 'matcher', 'stripWww']);
   $('baseUrl').value = s.baseUrl || 'http://192.168.1.1:2222/api';
@@ -97,7 +110,7 @@ async function loadRuleSetOptions({ showErrors } = {}) {
 async function addDomain() {
   const cfg = currentCfg();
   if (!cfg.baseUrl || !cfg.ruleSetTag) {
-    showStatus('Заполни Base URL и выбери rule-set', 'err');
+    showAddStatus('Заполни Base URL и выбери rule-set', 'err');
     return;
   }
   $('addBtn').disabled = true;
@@ -105,14 +118,14 @@ async function addDomain() {
     await saveSettings();
     const res = await addDomainToRuleSet(cfg, $('domainInput').value, cfg.matcher);
     if (res.alreadyPresent) {
-      showStatus(res.domain + ' уже был в наборе ' + res.tag, 'ok');
+      showAddStatus(res.domain + ' уже был в наборе ' + res.tag, 'ok');
     } else {
-      showStatus(res.domain + ' добавлен в ' + res.tag + ' (' + cfg.matcher + ')', 'ok');
+      showAddStatus(res.domain + ' добавлен в ' + res.tag + ' (' + cfg.matcher + ')', 'ok');
     }
     $('domainInput').value = '';
     await addHistory(res.domain);
   } catch (e) {
-    showStatus(String((e && e.message) || e), 'err');
+    showAddStatus(String((e && e.message) || e), 'err');
   } finally {
     $('addBtn').disabled = false;
   }
